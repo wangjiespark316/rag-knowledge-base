@@ -1,0 +1,69 @@
+# ===== Node.js / 前端 =====
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# ===== Java / Maven =====
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.logs
+.mvn/
+mvnw
+mvnw.cmd
+!.mvn/wrapper/maven-wrapper.jar
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# ===== IDE =====
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.project
+.classpath
+.settings/
+nbproject/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ===== 项目运行时文件 =====
+rag_uploads/
+*.log
+logs/
+chroma_db/
+*.db
+*.sqlite
+
+# ===== 环境变量 =====
+.env
+.env.local
+.env.*.local
+
+# ===== 大文件/临时 =====
+*.mp4
+*.avi
+*.mov
+test*.pdf
+test*.docx
+~$*

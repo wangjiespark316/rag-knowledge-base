@@ -1,0 +1,19 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ai-largedemo
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ai_rag_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    # 请修改为你自己的 MySQL 密码
+    username: root
+    password: your_mysql_password
+
+mybatis:
+  mapper-locations: "classpath:mappers/*.xml"
+  type-aliases-package: com.example.ailargedemo.entity
+  configuration:
+    map-underscore-to-camel-case: true
