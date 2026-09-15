@@ -1,0 +1,51 @@
+# 一键启动基础设施：MySQL + ChromaDB + Python嵌入服务
+# 后端(Spring Boot)和前端(Vue)在宿主机上跑，Ollama也在宿主机上跑
+#
+# 使用方法：
+#   1. ollama serve（宿主机）
+#   2. docker compose up -d
+#   3. cd java_RAGService/ai-largedemo && mvn spring-boot:run（宿主机）
+#   4. npm install && npm run dev（宿主机）
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: rag-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rag123456
+      MYSQL_DATABASE: ai_rag_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prag123456"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: rag-chroma
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+
+  embedding-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.embedding
+    container_name: rag-embedding
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    # 首次启动会自动下载 bge-base-zh 模型（约400MB），需要几分钟
+
+volumes:
+  mysql_data:
+  chroma_data:

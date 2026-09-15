@@ -30,16 +30,21 @@ Spring Boot (:8080) ── LangChain4j 编排
     └── MySQL (:3306)    ── 会话历史、文档记录
 ```
 
-五个服务要分别启动，下面一步步来。
+五个服务要分别启动。如果装了 Docker，MySQL、ChromaDB、嵌入服务这三个可以一条命令起，不用手动装：
+
+```bash
+docker compose up -d
+```
+
+然后只需要手动起 Ollama、后端、前端就行，下面步骤对应看。
 
 ## 环境要求
 
 - JDK 17（Spring Boot 3.x 必须 17+）
 - Node.js 18+
-- Python 3.10+
-- MySQL 8.0+
 - Ollama
-- Docker（用来跑 ChromaDB，也可以不用 Docker 直接 pip install chromadb）
+- Docker（可选，用来一键起 MySQL + ChromaDB + 嵌入服务）
+- 不用 Docker 的话需要本地装 MySQL 8.0+ 和 Python 3.10+
 
 内存建议 16GB 以上，Qwen2.5-7B 量化后大概占 5GB 内存。
 
