@@ -265,3 +265,7 @@ GET http://localhost:8080/api/rag/history
 ## License
 
 MIT
+
+---
+
+If this project helps you, feel free to give it a star ⭐
