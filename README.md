@@ -40,20 +40,20 @@ Spring Boot (:8080) ── LangChain4j 编排
     └── MySQL (:3306)    ── 会话历史、文档记录
 ```
 
-五个服务要分别启动。如果装了 Docker，MySQL、ChromaDB、嵌入服务这三个可以一条命令起，不用手动装：
+五个服务要分别启动。装了 Docker 的话，MySQL、ChromaDB、嵌入服务这三个一条命令起：
 
 ```bash
 docker compose up -d
 ```
 
-然后只需要手动起 Ollama、后端、前端就行，下面步骤对应看。
+然后只需要手动起 Ollama、后端、前端。下面步骤里标了"（Docker 模式可跳过）"的就不用管。
 
 ## 环境要求
 
 - JDK 17（Spring Boot 3.x 必须 17+）
 - Node.js 18+
 - Ollama
-- Docker（可选，用来一键起 MySQL + ChromaDB + 嵌入服务）
+- Docker（可选，推荐，用来一键起 MySQL + ChromaDB + 嵌入服务）
 - 不用 Docker 的话需要本地装 MySQL 8.0+ 和 Python 3.10+
 
 内存建议 16GB 以上，Qwen2.5-7B 量化后大概占 5GB 内存。
@@ -77,60 +77,43 @@ ollama list
 
 Ollama 装完会自动在后台跑，监听 `localhost:11434`。不用手动 `ollama serve`。
 
-> 如果机器内存紧张，可以换成 `qwen2.5:3b`，显存/内存占用更小，效果差一点但够 demo 用。换的话记得改 `RagService.java` 里的 modelName。
+> 如果机器内存紧张，可以换成 `qwen2.5:3b`，内存占用更小，效果差一点但够 demo 用。换的话记得改 `RagService.java` 里的 modelName。
 
-### 第 2 步：启动 ChromaDB
+### 第 2 步：启动基础设施（MySQL + ChromaDB + 嵌入服务）
 
-用 Docker 最简单：
+**用 Docker（推荐）**：
 
+```bash
+docker compose up -d
+```
+
+这会自动起三个容器：MySQL（密码 `rag123456`）、ChromaDB、Python 嵌入服务。首次启动嵌入服务会自动下载 bge-base-zh 模型（约 400MB），要等几分钟。
+
+启动完跳到第 4 步，application.yml 里密码改成 `rag123456`。
+
+**不用 Docker 的话**，手动起三个：
+
+ChromaDB：
 ```bash
 docker run -d -p 8000:8000 chromadb/chroma
+# 或 pip install chromadb && chroma run --path ./chroma_data --port 8000
 ```
 
-没装 Docker 的话也可以 pip 装本地版：
-
+Python 嵌入服务：
 ```bash
-pip install chromadb
-chroma run --path ./chroma_data --port 8000
-```
-
-验证是否启动成功：
-
-```bash
-curl http://localhost:8000/api/v1/heartbeat
-# 返回 {"nanosecond heartbeat":...} 就说明 OK
-```
-
-### 第 3 步：启动 Python 嵌入服务
-
-项目根目录下有个 `embed_server.py`，它用的是 `BAAI/bge-base-zh-v1.5` 中文向量模型。
-
-```bash
-cd 项目根目录
-
-# 建虚拟环境（建议）
 python3 -m venv venv
 source venv/bin/activate    # Windows: venv\Scripts\activate
-
-# 装依赖
 pip install -r embedding-requirements.txt
-
-# 启动（首次会自动下载 bge-base-zh 模型，约 400MB）
 uvicorn embed_server:app --host 0.0.0.0 --port 8001
 ```
 
-验证：
+MySQL 本地装完后建库建表（见第 4 步的 SQL）。
 
-```bash
-curl -X POST http://localhost:8001/embed \
-  -H "Content-Type: application/json" \
-  -d '{"text": "测试一下"}'
-# 返回 {"embedding": [0.012, -0.034, ...]} 就 OK
-```
+### 第 3 步：建 MySQL 数据库
 
-### 第 4 步：建 MySQL 数据库
+如果用 Docker 起的 MySQL，库和表已经自动建好了，密码是 `rag123456`。跳到第 4 步。
 
-登录 MySQL，执行：
+手动装 MySQL 的话，登录执行：
 
 ```sql
 CREATE DATABASE IF NOT EXISTS ai_rag_db DEFAULT CHARACTER SET utf8mb4;
@@ -154,29 +137,26 @@ CREATE TABLE chat_history (
 );
 ```
 
-然后改后端配置 `java_RAGService/ai-largedemo/src/main/resources/application.yml`，把数据库密码改成你自己的：
+### 第 4 步：改数据库密码
+
+编辑 `java_RAGService/ai-largedemo/src/main/resources/application.yml`：
 
 ```yaml
 spring:
   datasource:
     url: jdbc:mysql://localhost:3306/ai_rag_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     username: root
-    password: 你的MySQL密码
+    password: rag123456    # Docker compose 模式用这个，本地安装改成你自己的密码
 ```
 
 ### 第 5 步：启动 Spring Boot 后端
 
 ```bash
 cd java_RAGService/ai-largedemo
-
-# 确保 Maven 装了
 mvn spring-boot:run
 ```
 
-启动成功后跑在 `localhost:8080`。
-
-> 第一次跑 Maven 会下载依赖，可能要等几分钟。
-> 如果报 MyBatis 相关的错，不用管，Mapper 接口用的是注解 SQL，不需要 XML 文件。
+启动成功后跑在 `localhost:8080`。第一次跑 Maven 会下载依赖，要等几分钟。
 
 ### 第 6 步：启动前端
 
@@ -191,14 +171,14 @@ npm run dev
 
 ### 服务端口汇总
 
-| 服务 | 端口 | 怎么启动 |
-|------|------|----------|
-| 前端 Vite | 5173 | `npm run dev` |
-| Spring Boot | 8080 | `mvn spring-boot:run` |
-| Python 嵌入服务 | 8001 | `uvicorn embed_server:app --port 8001` |
-| ChromaDB | 8000 | `docker run -p 8000:8000 chromadb/chroma` |
-| Ollama | 11434 | 装完自动跑 |
-| MySQL | 3306 | 本地安装 |
+| 服务 | 端口 | Docker compose | 手动启动 |
+|------|------|----------------|----------|
+| 前端 Vite | 5173 | — | `npm run dev` |
+| Spring Boot | 8080 | — | `mvn spring-boot:run` |
+| Python 嵌入服务 | 8001 | ✅ | `uvicorn embed_server:app --port 8001` |
+| ChromaDB | 8000 | ✅ | `docker run -p 8000:8000 chromadb/chroma` |
+| Ollama | 11434 | — | 装完自动跑 |
+| MySQL | 3306 | ✅ | 本地安装，密码 `rag123456` |
 
 ## API 说明
 
@@ -244,12 +224,13 @@ GET http://localhost:8080/api/rag/history
 ├── src/
 │   ├── main.js
 │   ├── App.vue
-│   ├── components/
-│   │   └── ChatPage.vue      # 聊天主界面
-│   └── assets/
+│   └── components/
+│       └── ChatPage.vue      # 聊天主界面
 ├── embed_server.py           # Python 向量嵌入服务
 ├── rag_demo.py               # 纯 Python 的 RAG 最小 demo
 ├── embedding-requirements.txt
+├── docker-compose.yml        # 一键起 MySQL + ChromaDB + 嵌入服务
+├── Dockerfile.embedding
 └── java_RAGService/
     └── ai-largedemo/         # Spring Boot 后端
         ├── pom.xml
@@ -268,4 +249,4 @@ MIT
 
 ---
 
-If this project helps you, feel free to give it a star ⭐
+如果这个项目对你有帮助，点个 Star ⭐
